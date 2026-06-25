@@ -22,19 +22,21 @@ jobs:
       - name: Swift version
         run: swift --version
 
-      - name: Build arm64 (M 芯片)
+      - name: Build & Package (arm64)
         run: |
           chmod +x build.sh
           ./build.sh arm64
 
-      - name: Upload arm64 artifact
+      # ── 每次 push/PR 都上传 artifact，7天内可在 Actions 页面下载 ──
+      - name: Upload artifact (every push)
         uses: actions/upload-artifact@v4
         with:
-          name: MacroMouse-macOS
+          name: MacroMouse-macOS-arm64
           path: dist/MacroMouse-*.zip
           retention-days: 7
 
-      - name: Upload to Release (arm64)
+      # ── 仅在创建 Release 时附加到 Release 页面 ──
+      - name: Attach to GitHub Release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
