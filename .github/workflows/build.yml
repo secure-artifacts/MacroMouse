@@ -1,12 +1,10 @@
 name: Build MacroMouse
 on:
   push:
-    branches: [ main ]
-    tags: [ 'v*' ]
+    branches: [ main ]   # 日常 push 只构建，不触发 Release/attest（见下方 if 条件）
+    tags: [ 'v*' ]        # 平台 L2 校验要求：Release 必须由 tag push 触发
   pull_request:
     branches: [ main ]
-  release:
-    types: [ created ]
 
 jobs:
   build:
@@ -56,14 +54,14 @@ jobs:
 
       # 生成构建证明（密码学签名，证明该 zip 确实由本仓库在 GitHub 官方 runner 上构建）
       - name: Attest build provenance
-        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: 'dist/MacroMouse-${{ matrix.label }}.zip'
 
-      # 仅在 Release 时上传到 GitHub Releases（tag push 或网页创建 release 都会触发）
+      # 仅在 tag push 时上传到 GitHub Releases（平台要求：只能由 tag push 触发，不能用 release 事件）
       - name: Upload to Release (${{ matrix.label }})
-        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: dist/MacroMouse-${{ matrix.label }}.zip
