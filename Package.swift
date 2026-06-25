@@ -8,9 +8,10 @@ let package = Package(
         .executableTarget(
             name: "MacroMouse",
             path: "Sources/MacroMouse",
-            swiftSettings: [
-                .unsafeFlags(["-framework", "Carbon"], .when(configuration: .release)),
-                .unsafeFlags(["-framework", "Carbon"], .when(configuration: .debug)),
+            // Carbon 是系统框架，通过 linkerSettings 链接比 unsafeFlags 更干净，
+            // 不会产生"unsafeFlags cannot be used for non-root targets"警告
+            linkerSettings: [
+                .linkedFramework("Carbon")
             ]
         )
     ]

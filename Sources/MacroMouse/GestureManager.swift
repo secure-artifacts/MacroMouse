@@ -1,9 +1,10 @@
 import Cocoa
 import Carbon
 
-// MARK: - 手势方向
+// MARK: - 手势方向（8向）
 enum GestureDirection {
     case up, down, left, right
+    case upRight, upLeft, downRight, downLeft
 }
 
 // MARK: - 核心手势管理器
@@ -35,18 +36,40 @@ class GestureManager {
         if let m = mouseUpMonitor   { NSEvent.removeMonitor(m); mouseUpMonitor   = nil }
     }
 
-    // MARK: - 手势识别
+    // MARK: - 手势识别（8向）
+    //
+    // 判断策略：
+    //   先看总距离是否够长（minimumDistance）。
+    //   再看 dx/dy 的比例：
+    //     比例在 0.4 ~ 2.5 之间 → 斜向（45° ± ~22°）
+    //     比例 <= 0.4           → 纯垂直（上/下）
+    //     比例 >= 2.5           → 纯水平（左/右）
+    //   斜向阈值 0.4/2.5 对应约 22°，手感自然，
+    //   不会因为轻微歪斜把斜向误判为直向。
+    //
     private func handleGesture(from start: NSPoint, to end: NSPoint) {
-        let dx = end.x - start.x
-        let dy = end.y - start.y  // macOS Y 轴向上：上滑 dy > 0
-
+        let dx   = end.x - start.x
+        let dy   = end.y - start.y   // macOS Y 轴向上：上滑 dy > 0
         let dist = max(abs(dx), abs(dy))
+
         guard dist >= Config.shared.minimumDistance else { return }
 
         let direction: GestureDirection
-        if abs(dx) > abs(dy) {
+        let ratio = abs(dx) / max(abs(dy), 1)   // 防止除零
+
+        if ratio >= 0.4 && ratio <= 2.5 {
+            // 斜向
+            switch (dx > 0, dy > 0) {
+            case (true,  true):  direction = .upRight
+            case (false, true):  direction = .upLeft
+            case (true,  false): direction = .downRight
+            case (false, false): direction = .downLeft
+            }
+        } else if abs(dx) > abs(dy) {
+            // 水平
             direction = dx > 0 ? .right : .left
         } else {
+            // 垂直
             direction = dy > 0 ? .up : .down
         }
 
@@ -55,28 +78,20 @@ class GestureManager {
 
     // MARK: - 动作派发
     //
-    // 延迟策略说明：
-    //   右键松开后，系统会弹出右键菜单（约需 50-80ms 完成绘制）。
-    //   对于只需模拟快捷键的动作（复制/粘贴/剪切），
-    //   等菜单弹出后焦点仍在原应用，快捷键能正确送达。
-    //   对于需要额外操作剪贴板的动作（右滑随机文本），
-    //   不在这里再加延迟，由 pasteRandomLine 内部统一控制。
+    // 延迟 80ms：等右键菜单完成绘制，焦点稳定在原应用后再发快捷键。
+    // pasteRandomLine 不在内部再加延迟，统一由这里的 80ms 覆盖。
     //
     private func dispatchAction(for direction: GestureDirection) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
             switch direction {
-            case .up:
-                print("🖱 手势：上 → 复制")
-                ActionExecutor.performCopy()
-            case .down:
-                print("🖱 手势：下 → 粘贴")
-                ActionExecutor.performPaste()
-            case .right:
-                print("🖱 手势：右 → 随机文本输入")
-                ActionExecutor.pasteRandomLine()
-            case .left:
-                print("🖱 手势：左 → 剪切")
-                ActionExecutor.performCut()
+            case .up:        print("🖱 上       → 复制");          ActionExecutor.performCopy()
+            case .down:      print("🖱 下       → 粘贴");          ActionExecutor.performPaste()
+            case .right:     print("🖱 右       → 随机文本");      ActionExecutor.pasteRandomLine()
+            case .left:      print("🖱 左       → 剪切");          ActionExecutor.performCut()
+            case .upRight:   print("🖱 右上     → 最大化窗口");    ActionExecutor.maximizeWindow()
+            case .downLeft:  print("🖱 左下     → 最小化窗口");    ActionExecutor.minimizeWindow()
+            case .upLeft:    print("🖱 左上     → (未分配)");      break
+            case .downRight: print("🖱 右下     → (未分配)");      break
             }
         }
     }
