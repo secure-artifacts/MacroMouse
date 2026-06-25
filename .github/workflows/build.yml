@@ -1,0 +1,45 @@
+name: Build MacroMouse
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ created ]
+
+jobs:
+  build:
+    runs-on: macos-14   # Apple Silicon runner, Xcode 15+
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Build (Release)
+        run: swift build -c release
+
+      - name: Package .app
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MacroMouse.app
+          path: dist/MacroMouse.app
+          retention-days: 7
+
+      # 仅在 Release 时上传到 GitHub Releases
+      - name: Upload to Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/MacroMouse.app
