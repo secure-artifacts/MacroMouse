@@ -1,5 +1,4 @@
 name: Build MacroMouse
-
 on:
   push:
     branches: [ main ]
