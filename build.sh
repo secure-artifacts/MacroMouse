@@ -54,6 +54,12 @@ if [ -f "Resources/AppIcon.icns" ]; then
     cp "Resources/AppIcon.icns" "${APP_DIR}/Contents/Resources/"
 fi
 
+echo "✍️  对 .app 进行 ad-hoc 签名（M 芯片必须有签名才能运行，否则提示「已损坏」）..."
+codesign --force --deep -s - "${APP_DIR}"
+
+echo "🔍 验证签名："
+codesign -dv --verbose=4 "${APP_DIR}" 2>&1 | head -5
+
 echo "🔍 验证架构（应只显示单一架构 ${ARCH}）："
 lipo -info "${APP_DIR}/Contents/MacOS/${APP_NAME}" 2>/dev/null || file "${APP_DIR}/Contents/MacOS/${APP_NAME}"
 
