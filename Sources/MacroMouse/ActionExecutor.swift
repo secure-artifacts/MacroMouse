@@ -68,11 +68,19 @@ enum ActionExecutor {
         postKeyboardShortcut(keyCode: kVK_ANSI_M, flags: .maskCommand)
     }
 
-    // MARK: - 最大化（全屏切换）当前窗口
+    // MARK: - 窗口最大化（充满屏幕，不进全屏）
     //
-    // macOS 没有统一最大化快捷键，用 AppleScript + AXFullScreen 属性实现。
-    // 修复：放到后台线程执行，避免 AppleScript 的 IPC 延迟阻塞主线程。
-    // CGEvent 键盘模拟必须在主线程；AppleScript 可以在任意线程。
+    // 使用 AXZoom 动作，等同于点击绿色按钮第一下：
+    //   小窗口   → 充满屏幕（保留菜单栏和 Dock）
+    //   已最大化  → 恢复原始大小（再次右上滑切换回来）
+    //
+    // 不使用 AXFullScreen 的原因：
+    //   全屏会把窗口移入独立 Space，之后手势无法访问该窗口，
+    //   导致左下滑最小化等手势在全屏状态下全部失效。
+    //   AXZoom 始终在普通 Space 内操作，所有手势保持可用。
+    //
+    // 后台线程执行：AppleScript 走 IPC 耗时 100-300ms，
+    // 放后台避免阻塞主线程。
     //
     static func maximizeWindow() {
         DispatchQueue.global(qos: .userInteractive).async {
@@ -81,8 +89,7 @@ enum ActionExecutor {
                 set frontApp to first application process whose frontmost is true
                 tell frontApp
                     if exists window 1 then
-                        set isFullScreen to value of attribute "AXFullScreen" of window 1
-                        set value of attribute "AXFullScreen" of window 1 to not isFullScreen
+                        perform action "AXZoom" of window 1
                     end if
                 end tell
             end tell
@@ -91,7 +98,7 @@ enum ActionExecutor {
         }
     }
 
-    // MARK: - AppleScript 执行（内部工具，可在任意线程调用）
+    // MARK: - AppleScript 执行（后台线程调用）
     private static func runAppleScript(_ source: String, errorTitle: String) {
         guard let script = NSAppleScript(source: source) else { return }
         var errorDict: NSDictionary?
@@ -101,7 +108,7 @@ enum ActionExecutor {
         }
     }
 
-    // MARK: - 模拟键盘快捷键（底层 CGEvent，主线程调用）
+    // MARK: - 模拟键盘快捷键（底层 CGEvent）
     static func postKeyboardShortcut(keyCode: Int, flags: CGEventFlags) {
         let source = CGEventSource(stateID: .combinedSessionState)
         let vk = CGKeyCode(UInt16(keyCode))
