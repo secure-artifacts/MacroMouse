@@ -12,7 +12,9 @@ jobs:
   build:
     runs-on: macos-14   # Apple Silicon runner, Xcode 15+
     permissions:
-      contents: write    # 没有这个会导致上传 Release 时报 "Resource not accessible by integration"
+      contents: write       # 没有这个会导致上传 Release 时报 "Resource not accessible by integration"
+      id-token: write       # OIDC 签名身份，构建证明需要
+      attestations: write   # 写入构建证明记录
 
     strategy:
       fail-fast: false   # 一个架构失败不影响另一个架构继续构建
@@ -51,6 +53,13 @@ jobs:
           name: MacroMouse-${{ matrix.label }}
           path: dist/MacroMouse-${{ matrix.label }}.zip
           retention-days: 7
+
+      # 生成构建证明（密码学签名，证明该 zip 确实由本仓库在 GitHub 官方 runner 上构建）
+      - name: Attest build provenance
+        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'dist/MacroMouse-${{ matrix.label }}.zip'
 
       # 仅在 Release 时上传到 GitHub Releases（tag push 或网页创建 release 都会触发）
       - name: Upload to Release (${{ matrix.label }})
