@@ -8,9 +8,9 @@
     <key>CFBundleIdentifier</key>
     <string>com.yourname.macromouse</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>1.1.0</string>
     <key>CFBundleExecutable</key>
     <string>MacroMouse</string>
     <key>CFBundlePackageType</key>
@@ -22,7 +22,7 @@
 
     <!-- 辅助功能权限说明（系统弹窗显示） -->
     <key>NSAppleEventsUsageDescription</key>
-    <string>MacroMouse 需要控制其他应用以执行复制粘贴操作。</string>
+    <string>MacroMouse 需要控制其他应用以执行复制、粘贴、剪切、窗口最大化/最小化、回车等手势操作。</string>
 
     <!-- 通知权限 -->
     <key>NSUserNotificationsUsageDescription</key>

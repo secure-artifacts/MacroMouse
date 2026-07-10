@@ -15,6 +15,16 @@ class GestureManager {
     private var mouseDownMonitor: Any?
     private var mouseUpMonitor: Any?
 
+    // MARK: - 右键快速双击 → 回车（危险操作，需严格限制误触发）
+    //
+    // 只有当两次右键"点击"（几乎无移动）发生在系统双击时间间隔内、
+    // 且两次点击位置足够接近时，才判定为快速双击。
+    // 单次点击、拖动手势、或超时的第二次点击都不会触发。
+    //
+    private var lastRightClickTime: Date?
+    private var lastRightClickPoint: NSPoint?
+    private let clickMoveTolerance: CGFloat = 8   // 小于此距离视为"点击"而非拖动手势
+
     func startMonitoring() {
         mouseDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: .rightMouseDown) { [weak self] _ in
             guard let self, Config.shared.gestureEnabled else { return }
@@ -27,7 +37,17 @@ class GestureManager {
             self.isTracking = false
             self.startPoint = nil
             let end = NSEvent.mouseLocation
-            self.handleGesture(from: start, to: end)
+
+            let dx = end.x - start.x
+            let dy = end.y - start.y
+            let moveDist = max(abs(dx), abs(dy))
+
+            if moveDist < self.clickMoveTolerance {
+                // 几乎没有移动 → 这是一次"点击"而非手势，交给双击检测
+                self.handlePotentialDoubleClick(at: end)
+            } else {
+                self.handleGesture(from: start, to: end)
+            }
         }
     }
 
@@ -74,6 +94,42 @@ class GestureManager {
         }
 
         dispatchAction(for: direction)
+    }
+
+    // MARK: - 右键快速双击检测
+    private func handlePotentialDoubleClick(at point: NSPoint) {
+        let now = Date()
+
+        defer {
+            // 无论本次是否判定成功，都把这次点击记为"上一次点击"，
+            // 供下一次点击比对（同时也防止连续三击被误判为两次双击）
+            lastRightClickTime  = now
+            lastRightClickPoint = point
+        }
+
+        guard
+            let lastTime  = lastRightClickTime,
+            let lastPoint = lastRightClickPoint
+        else { return }   // 这是第一次点击，先记录，等待可能的第二次
+
+        let interval = now.timeIntervalSince(lastTime)
+        let dx = point.x - lastPoint.x
+        let dy = point.y - lastPoint.y
+        let posDist = max(abs(dx), abs(dy))
+
+        guard interval <= NSEvent.doubleClickInterval, posDist < clickMoveTolerance else {
+            return   // 太慢或位置偏移太大，不算快速双击
+        }
+
+        // 判定为快速双击：清空状态，避免紧接着的第三次点击被误判
+        lastRightClickTime  = nil
+        lastRightClickPoint = nil
+
+        print("🖱 右键快速双击 → 回车（危险操作，已确认为快速双击）")
+        // 与手势动作保持一致的延迟，等右键菜单绘制完成、焦点稳定后再发送
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            ActionExecutor.performEnter()
+        }
     }
 
     // MARK: - 动作派发

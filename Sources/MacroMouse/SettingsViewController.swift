@@ -4,7 +4,7 @@ class SettingsWindowController: NSWindowController {
 
     convenience init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 380),
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 402),
             styleMask:   [.titled, .closable],
             backing:     .buffered,
             defer:       false
@@ -26,7 +26,7 @@ class SettingsViewController: NSViewController {
     private let helpLabel    = NSTextField(wrappingLabelWithString: "")
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 520, height: 380))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 520, height: 402))
     }
 
     override func viewDidLoad() {
@@ -39,7 +39,7 @@ class SettingsViewController: NSViewController {
     private func setupUI() {
         let title = NSTextField(labelWithString: "MacroMouse 设置")
         title.font = .boldSystemFont(ofSize: 18)
-        title.frame = NSRect(x: 20, y: 335, width: 300, height: 30)
+        title.frame = NSRect(x: 20, y: 357, width: 300, height: 30)
         view.addSubview(title)
 
         // 4向说明
@@ -47,7 +47,7 @@ class SettingsViewController: NSViewController {
             "↑ 上滑 → 复制   |   ↓ 下滑 → 粘贴   |   → 右滑 → 随机文本   |   ← 左滑 → 剪切")
         desc4.font = .systemFont(ofSize: 11)
         desc4.textColor = .secondaryLabelColor
-        desc4.frame = NSRect(x: 20, y: 308, width: 480, height: 20)
+        desc4.frame = NSRect(x: 20, y: 330, width: 480, height: 20)
         view.addSubview(desc4)
 
         // 斜向说明
@@ -55,11 +55,19 @@ class SettingsViewController: NSViewController {
             "↗ 右上滑 → 最大化/全屏切换   |   ↙ 左下滑 → 最小化   |   ↖ 左上滑 / ↘ 右下滑 → 未分配")
         desc8.font = .systemFont(ofSize: 11)
         desc8.textColor = .secondaryLabelColor
-        desc8.frame = NSRect(x: 20, y: 286, width: 480, height: 20)
+        desc8.frame = NSRect(x: 20, y: 308, width: 480, height: 20)
         view.addSubview(desc8)
 
+        // 右键快速双击说明（危险操作，需单独提示）
+        let descDoubleClick = NSTextField(wrappingLabelWithString:
+            "⚡ 右键快速双击（不拖动）→ 回车   |   必须在系统双击间隔内完成，否则不触发，防止误触")
+        descDoubleClick.font = .systemFont(ofSize: 11)
+        descDoubleClick.textColor = .secondaryLabelColor
+        descDoubleClick.frame = NSRect(x: 20, y: 264, width: 480, height: 20)
+        view.addSubview(descDoubleClick)
+
         let sep1 = NSBox(); sep1.boxType = .separator
-        sep1.frame = NSRect(x: 20, y: 276, width: 480, height: 1)
+        sep1.frame = NSRect(x: 20, y: 254, width: 480, height: 1)
         view.addSubview(sep1)
 
         // 启用开关
@@ -121,7 +129,7 @@ class SettingsViewController: NSViewController {
         view.addSubview(createBtn)
 
         // 版本号
-        let ver = NSTextField(labelWithString: "v1.0.5")
+        let ver = NSTextField(labelWithString: "v1.1.0")
         ver.font = .systemFont(ofSize: 10)
         ver.textColor = .tertiaryLabelColor
         ver.frame = NSRect(x: 20, y: 14, width: 100, height: 16)

@@ -1,123 +1,104 @@
-# 🖱 MacroMouse
+# MacroMouse
 
-一款轻量的 macOS 全局鼠标手势工具，无需安装，住在菜单栏。
+一个轻量的 macOS 菜单栏鼠标手势工具：按住鼠标右键滑动，即可触发复制/粘贴/剪切、随机文本粘贴、窗口最大化/最小化等操作。
 
----
+![Gesture Diagram](assets/gesture-diagram.svg)
 
 ## ✨ 功能
 
 | 手势 | 动作 |
-|------|------|
-| 右键 **上滑** | 复制（⌘C） |
-| 右键 **下滑** | 粘贴（⌘V） |
-| 右键 **右滑** | 从文本文件随机抽取一行并粘贴 |
-| 右键 **左滑** | 剪切（⌘X） |
+| --- | --- |
+| ↑ 上滑 | 复制（⌘C） |
+| ↓ 下滑 | 粘贴（⌘V） |
+| → 右滑 | 从指定文本文件中随机粘贴一行 |
+| ← 左滑 | 剪切（⌘X） |
+| ↗ 右上滑 | 最大化 / 全屏切换 |
+| ↙ 左下滑 | 最小化窗口（⌘M） |
+| ↖ 左上滑 / ↘ 右下滑 | 未分配，预留扩展 |
+| ⚡ 右键快速双击（不拖动） | 回车（危险操作，见下方说明） |
 
----
+### 关于「右键快速双击 → 回车」
 
-## 🚀 快速开始
+回车是一个有风险的操作（可能确认删除、提交表单等），因此触发条件比普通手势更严格：
 
-### 方式一：直接下载（推荐）
+- 两次右键点击之间**几乎没有移动**（视为点击而非拖动手势）
+- 两次点击的**时间间隔在系统双击间隔内**（跟随 macOS 系统设置，不是写死的固定值）
+- 两次点击的**位置足够接近**
 
-前往 [Releases](../../releases) 下载最新的 `MacroMouse.app`，拖入 `/Applications` 即可。
+单次点击、慢速的两次点击、或点击后拖动都不会触发，避免误触发。
 
-### 方式二：从源码编译
+## 🚀 安装 / 构建
 
-**前提：** macOS 13+，Xcode 15 或 Command Line Tools
+### 直接下载
+
+- **正式版本**：在 [Releases](https://github.com/secure-artifacts/MacroMouse/releases) 页面下载。每次打 `v*` tag（如 `v1.1.0`）会自动触发构建并发布到对应 Release，文件名形如：
+  - `MacroMouse-macOS-v1.1.0.zip`（Apple Silicon）
+  - `Mouse-intel-v1.1.0.zip`（Intel）
+- **开发版本**：push 到 `main` 分支或提交 PR 也会自动构建，但不会发布到 Release，只能在对应 [Actions](https://github.com/secure-artifacts/MacroMouse/actions) 运行记录的 Artifacts 里下载（保留 7 天），文件名带 `dev` 版本号，如 `MacroMouse-macOS-dev.zip`。
+- 打 tag 触发的构建还会附加 [build provenance attestation](https://github.com/secure-artifacts/MacroMouse/attestations)，可用于验证产物确实来自本仓库的 CI。
+
+首次打开若提示"无法验证开发者"，右键点击 App →「打开」，或在「系统设置 → 隐私与安全性」中允许运行（应用为 ad-hoc 签名，非公证发布）。
+
+### 本地构建
+
+需要 Xcode / Swift 工具链（`swift build` 可用即可）。
 
 ```bash
-git clone https://github.com/yourname/MacroMouse.git
+git clone https://github.com/secure-artifacts/MacroMouse.git
 cd MacroMouse
-chmod +x build.sh
-./build.sh
+
+# Apple Silicon
+./build.sh arm64
+
+# Intel
+./build.sh x86_64
 ```
 
-编译产物在 `dist/MacroMouse.app`。
+构建完成后会在 `dist/` 目录生成 `MacroMouse.app` 及对应的 `MacroMouse-macOS.zip` / `MacroMouse-Intel.zip`。`build.sh` 会自动完成编译（`swift build -c release`）、打包 `.app`、拷贝 `Resources/Info.plist`（及 `AppIcon.icns`，如存在）、ad-hoc 代码签名。
 
----
+也可以只编译不打包：
 
-## ⚙️ 首次运行配置
+```bash
+swift build -c release
+swift run
+```
 
-1. **打开应用** — 菜单栏出现鼠标光标图标即为成功
-2. **授权辅助功能** — 系统会弹窗提示，点击「打开系统设置」并勾选 MacroMouse
+首次运行需要在 **系统设置 → 隐私与安全性 → 辅助功能** 中为 MacroMouse 授权（用于监听全局鼠标事件和模拟键盘按键）。
 
-   > 路径：系统设置 → 隐私与安全性 → 辅助功能
+## ⚙️ 使用
 
-3. **准备文本文件（可选）** — 菜单栏图标 → 偏好设置 → 创建示例文件
+1. 启动后应用会出现在菜单栏（无 Dock 图标）。
+2. 点击菜单栏图标 →「偏好设置」，可以：
+   - 开启/关闭手势
+   - 调整最小触发距离
+   - 设置随机文本文件路径，并一键生成示例文件
+3. 按住鼠标右键并滑动即可触发对应动作。
 
----
-
-## 📂 项目结构
+## 📁 项目结构
 
 ```
 MacroMouse/
 ├── Sources/MacroMouse/
-│   ├── main.swift                # 入口，请求辅助功能权限
-│   ├── AppDelegate.swift         # 菜单栏生命周期
-│   ├── GestureManager.swift      # 全局鼠标事件监听与手势识别
-│   ├── ActionExecutor.swift      # 手势动作执行（复制/粘贴/随机文本/清空）
-│   ├── SettingsViewController.swift  # 偏好设置窗口
-│   └── Config.swift              # UserDefaults 配置持久化
+│   ├── main.swift                    # 入口，请求辅助功能权限
+│   ├── AppDelegate.swift             # 菜单栏图标与生命周期
+│   ├── GestureManager.swift          # 手势 / 双击识别核心逻辑
+│   ├── ActionExecutor.swift          # 具体动作执行（键盘模拟、AppleScript 等）
+│   ├── Config.swift                  # 基于 UserDefaults 的配置存储
+│   └── SettingsViewController.swift  # 偏好设置界面
 ├── Resources/
-│   └── Info.plist                # 应用元数据与权限说明
-├── .github/workflows/build.yml   # GitHub Actions 自动打包
-├── Package.swift                 # Swift Package Manager
-├── build.sh                      # 本地打包脚本
-└── README.md
+│   └── Info.plist                    # 应用元数据与权限说明
+├── .github/workflows/build.yml       # GitHub Actions 自动打包（arm64 + x86_64）
+├── Package.swift                     # Swift Package Manager
+├── build.sh                          # 本地/CI 打包脚本（编译 → 打包 .app → 签名 → 压缩）
+└── assets/gesture-diagram.svg        # 手势示意图
 ```
 
----
+## ⚠️ 注意事项
 
-## 🗺 架构图
-
-```
-右键按下
-    │
-    ▼
-GestureManager
-  startPoint = 当前鼠标位置
-    │
-    │（右键松开）
-    ▼
-analyzeGesture(from:to:)
-  dx = end.x - start.x
-  dy = end.y - start.y
-  方向 = max(|dx|, |dy|) 对应轴
-    │
-    ├── 上 ──▶ ActionExecutor.performCopy()
-    ├── 下 ──▶ ActionExecutor.performPaste()
-    ├── 右 ──▶ ActionExecutor.pasteRandomLine()
-    └── 左 ──▶ ActionExecutor.clearClipboard()
-
-Config（UserDefaults）
-  ├── textFilePath        ← 随机文本文件路径
-  ├── minimumDistance     ← 最小触发像素（默认 40px）
-  └── gestureEnabled      ← 全局开关
-```
-
----
-
-## 🔒 隐私说明
-
-- 本应用**不联网**，所有数据留在本机
-- 监听鼠标事件需要辅助功能权限（macOS 强制要求）
-- 不记录鼠标坐标或任何用户数据
-
----
-
-## 🛠 扩展手势
-
-在 `GestureManager.swift` 的 `dispatchAction` 中添加分支，在 `ActionExecutor.swift` 中添加对应方法即可。
-
----
-
-## 📋 系统要求
-
-- macOS 13 Ventura 或更新
-- 辅助功能权限
-
----
+- 需要「辅助功能」权限才能监听全局鼠标事件和模拟按键。
+- 应用不会拦截或消费鼠标事件，右键菜单仍会正常弹出。
+- 最大化/全屏切换基于 AppleScript + Accessibility API 实现，个别应用（未适配无障碍接口）可能不响应。
 
 ## 📄 License
 
-MIT
+[MIT](LICENSE)
