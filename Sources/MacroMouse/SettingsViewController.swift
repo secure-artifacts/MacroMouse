@@ -129,7 +129,7 @@ class SettingsViewController: NSViewController {
         view.addSubview(createBtn)
 
         // 版本号
-        let ver = NSTextField(labelWithString: "v1.1.0")
+        let ver = NSTextField(labelWithString: "v1.1.1")
         ver.font = .systemFont(ofSize: 10)
         ver.textColor = .tertiaryLabelColor
         ver.frame = NSRect(x: 20, y: 14, width: 100, height: 16)
@@ -189,7 +189,42 @@ class SettingsViewController: NSViewController {
             alert.runModal()
             return
         }
-        let sample = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"].joined(separator: "\n")
+
+        // Bug 修复：文件已存在时必须二次确认，防止「创建示例文件」
+        // 静默覆盖用户已经写好的内容
+        if FileManager.default.fileExists(atPath: path) {
+            let confirm = NSAlert()
+            confirm.messageText     = "文件已存在"
+            confirm.informativeText = "路径：\(path)\n\n该文件已有内容，创建示例文件会覆盖原有内容（旧文件会自动备份为 .bak）。确定要覆盖吗？"
+            confirm.addButton(withTitle: "取消")
+            confirm.addButton(withTitle: "覆盖")
+            confirm.alertStyle = .warning
+            guard confirm.runModal() == .alertSecondButtonReturn else {
+                return   // 用户点了「取消」，不做任何写入
+            }
+
+            // 覆盖前自动备份旧文件为 <原路径>.bak，防止误覆盖导致内容无法找回
+            let backupPath = path + ".bak"
+            do {
+                if FileManager.default.fileExists(atPath: backupPath) {
+                    try FileManager.default.removeItem(atPath: backupPath)
+                }
+                try FileManager.default.copyItem(atPath: path, toPath: backupPath)
+                print("🗂 已备份旧文件到：\(backupPath)")
+            } catch {
+                // 备份失败不阻断流程，但要明确告知用户，避免用户误以为已经有备份
+                print("⚠️ 备份旧文件失败：\(error)")
+                let alert = NSAlert()
+                alert.messageText     = "备份失败"
+                alert.informativeText = "无法创建备份文件（\(backupPath)），原因：\(error.localizedDescription)\n\n是否仍要继续覆盖？"
+                alert.alertStyle = .warning
+                alert.addButton(withTitle: "取消")
+                alert.addButton(withTitle: "仍然覆盖")
+                guard alert.runModal() == .alertSecondButtonReturn else { return }
+            }
+        }
+
+        let sample = ["# 以 # 开头的行是注释，不会被随机抽中", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"].joined(separator: "\n")
         do {
             let dir = (path as NSString).deletingLastPathComponent
             try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
@@ -197,7 +232,9 @@ class SettingsViewController: NSViewController {
             updateHelpLabel()
             let alert = NSAlert()
             alert.messageText     = "示例文件已创建"
-            alert.informativeText = "路径：\(path)"
+            alert.informativeText = FileManager.default.fileExists(atPath: path + ".bak")
+                ? "路径：\(path)\n\n旧文件已备份为：\(path).bak"
+                : "路径：\(path)"
             alert.runModal()
         } catch {
             let alert = NSAlert()

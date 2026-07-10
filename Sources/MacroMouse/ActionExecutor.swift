@@ -34,7 +34,7 @@ enum ActionExecutor {
             let lines = content
                 .components(separatedBy: .newlines)
                 .map    { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty }
+                .filter { !$0.isEmpty && !$0.hasPrefix("#") }   // 空行和 # 开头的注释行都不参与随机抽取
 
             print("📄 读到 \(lines.count) 行：\(lines)")
 
